@@ -34,15 +34,12 @@ template<> FORCEINLINE void VLCFreeList(char*const &adr) {
 
 using VLCString = VLCAllocList<char>;
 
-template<> FORCEINLINE constexpr VLCKind VLCStructKindOf<libvlc_instance_t>() { return VLCKind::Library; }
 template<> FORCEINLINE void VLCRelease(libvlc_instance_t*const&v) { libvlc_release(v); }
 template<> FORCEINLINE void VLCRetain(libvlc_instance_t*const&v) { libvlc_retain(v); }
 
-template<> FORCEINLINE constexpr VLCKind VLCStructKindOf<libvlc_media_player_t>() { return VLCKind::MediaPlayer; }
 template<> FORCEINLINE void VLCRelease(libvlc_media_player_t*const&v) { libvlc_media_player_release(v); }
 template<> FORCEINLINE void VLCRetain(libvlc_media_player_t*const&v) { libvlc_media_player_retain(v); }
 
-template<> FORCEINLINE constexpr VLCKind VLCStructKindOf<libvlc_media_t>() { return VLCKind::Media; }
 template<> FORCEINLINE void VLCRelease(libvlc_media_t*const&v) { libvlc_media_release(v); }
 template<> FORCEINLINE void VLCRetain(libvlc_media_t*const&v) { libvlc_media_retain(v); }
 
@@ -50,6 +47,8 @@ template<>
 struct VLC<VLCKind::Library> : public VLCWrapper<libvlc_instance_t> {
 	FORCEINLINE VLC(int argc = 0, const char *const *argv = nullptr)
 		: Wrapper(ConstructorRetain, libvlc_new(argc, argv)) {}
+	template<size_t argc>
+	FORCEINLINE VLC(const char *const (&argv)[argc]) : VLC((int)argc, 0== argc?nullptr:&argv[0]) {};
 	FORCEINLINE VLC(TStruct *const& retain) : Wrapper(retain) { Retain(); }
 	FORCEINLINE VLC(const VLC& copy) : Wrapper(copy.GetStructure()) { Retain(); }
 	FORCEINLINE ~VLC() { Release(); }
@@ -205,7 +204,7 @@ using VLCMediaPathString = VLCMediaString<VLCMediaStringUsage::Path>;
 using VLCMediaLocationString = VLCMediaString<VLCMediaStringUsage::Location>;
 using VLCMediaNodeNameString = VLCMediaString<VLCMediaStringUsage::NodeName>;
 #define Macro_VLCImplementMediaString(Usage,.../*operation*/) \
-using VLCMedia##Usage##String = VLCMediaString<VLCMediaStringUsage::NodeName>; \
+using VLCMedia##Usage##String = VLCMediaString<VLCMediaStringUsage::Usage>; \
 FORCEINLINE libvlc_media_t *VLCMedia##Usage##String::Open(libvlc_instance_t*const& instance, const char *const& sz){ \
 	return (nullptr==instance||nullptr==sz)?nullptr:__VA_ARGS__; \
 }
@@ -300,7 +299,7 @@ template<VLCDrawableKind Kind> struct VLCDrawableKindInfo;
 #define Macro_VLCDrawableKind(Kind,Handle,GetF,SetF) \
 template<> struct VLCDrawableKindInfo<VLCDrawableKind::Draw_##Kind> \
 	: public VLCDrawableKindHandleInfo<Handle> { \
-	static FORCEINLINE void Set(libvlc_media_player_t*const m, THandle const h) { Set(m, h); } \
+	static FORCEINLINE void Set(libvlc_media_player_t*const m, THandle const h) { SetF(m, h); } \
 	static FORCEINLINE THandle Get(libvlc_media_player_t*const m) { return GetF(m); } \
 }
 Macro_VLCDrawableKind(NSObject, void*, libvlc_media_player_get_nsobject, libvlc_media_player_set_nsobject);
@@ -308,21 +307,6 @@ Macro_VLCDrawableKind(HWND, void*, libvlc_media_player_get_hwnd, libvlc_media_pl
 Macro_VLCDrawableKind(XWindow, uint32_t, libvlc_media_player_get_xwindow, libvlc_media_player_set_xwindow);
 Macro_VLCDrawableKind(AGL, uint32_t, libvlc_media_player_get_agl, libvlc_media_player_set_agl);
 #undef Macro_VLCDrawableKind
-
-
-template<VLCDrawableKind Kind>
-struct VLCDrawableKindInfo<Kind, true> {
-	static_assert(IsVoidPtr(Kind) && (uint8_t)Kind < VLCDrawableKindNum(), "Invalid context");
-	using THandle = void*;
-};
-
-template<VLCDrawableKind Kind>
-struct VLCDrawableKindInfo<Kind, false> {
-	static_assert(!IsVoidPtr(Kind) && (uint8_t)Kind < VLCDrawableKindNum(), "Invalid context");
-	using THandle = uint32_t;
-};
-
-
 
 template<>
 struct VLC<VLCKind::MediaPlayer> : public VLCWrapper<libvlc_media_player_t> {
@@ -335,6 +319,8 @@ struct VLC<VLCKind::MediaPlayer> : public VLCWrapper<libvlc_media_player_t> {
 		: Wrapper(ConstructorRetain,
 			nullptr != media ? libvlc_media_player_new_from_media(media) : nullptr) {
 	}
+	explicit FORCEINLINE VLC(const VLCLibrary &instance) : VLC(instance.GetStructure()) {}
+	explicit FORCEINLINE VLC(const VLCMedia &media) : VLC(media.GetStructure()) {}
 	explicit FORCEINLINE VLC(TStruct *const &ptr) : Wrapper(ptr) {}
 
 	FORCEINLINE VLC(const VLC&copy) : Wrapper(copy) {

@@ -23,7 +23,7 @@
 #	ifndef LIBVLCX_NAMESPACE
 
 #		ifndef LIBVLCX_NAMESPACE_START
-#			define LIBVLCX_NAMESPACE_START namespace RTSPHUB {
+#			define LIBVLCX_NAMESPACE_START namespace LibVLCX {
 #		endif
 
 #		ifndef LIBVLCX_NAMESPACE_END

@@ -13,6 +13,18 @@ enum class VLCKind : uint8_t {
 	MediaPlayer = 3,
 };
 
+#define Macro_LIBVLCX_Enumerate_VLCKind(x,...)\
+	x(Null)__VA_ARGS__ \
+	x(Library)__VA_ARGS__ \
+	x(Media)__VA_ARGS__ \
+	x(MediaPlayer)
+
+#define Macro_LIBVLCX_EnumerateValid_VLCKind(x,...)\
+	x(Library,libvlc_instance_t)__VA_ARGS__ \
+	x(Media,libvlc_media_t)__VA_ARGS__ \
+	x(MediaPlayer,libvlc_media_player_t)
+
+
 VLCX_INLINE constexpr uint8_t VLCKindNum() { return 4; }
 
 VLCX_INLINE constexpr bool VLCHasEventManager(VLCKind Kind) {
@@ -22,8 +34,17 @@ template<typename Struct> VLCX_INLINE void VLCRelease(Struct *const&);
 template<typename Struct> VLCX_INLINE void VLCRetain(Struct *const&);
 template<typename Struct> struct VLCWrapper;
 template<VLCKind Kind> struct VLC;
-template<typename Struct> VLCX_INLINE constexpr VLCKind VLCStructKindOf();
-template<VLCKind Kind> using VLCStruct = typename VLC<Kind>::TStruct;
+template<typename Struct> VLCX_INLINE constexpr VLCKind VLCStructKindOf() { return VLCKind::Null; }
+template<VLCKind Kind> struct VLCKindDef { using TStruct = void; };
+template<VLCKind Kind> using VLCStruct = typename VLCKindDef<Kind>::TStruct;
+
+#define Macro_LIBVLCX_PopulateKind(name,...) \
+template<> VLCX_INLINE constexpr VLCKind VLCStructKindOf<__VA_ARGS__>(){return VLCKind::name;} \
+template<> struct VLCKindDef<VLCKind::name> { using TStruct = __VA_ARGS__; }
+
+Macro_LIBVLCX_EnumerateValid_VLCKind(Macro_LIBVLCX_PopulateKind, ;);
+
+#undef Macro_LIBVLCX_PopulateKind
 
 LIBVLCX_API struct VLCTag {
 	uint32_t Int;
@@ -101,16 +122,16 @@ public:
 	VLCX_INLINE void Detach(libvlc_event_type_t i_event_type,
 		libvlc_callback_t f_callback,
 		void*const p_user_data)const {
-		libvlc_event_detach(Manager, i_event_type, f_callback, p_user_data)
+		libvlc_event_detach(Manager, i_event_type, f_callback, p_user_data);
 	}
 	VLCX_INLINE int Attach(const VLCEventHandler &h) const { return Attach(h.EventType, h.Callback, h.UserData); }
-	VLCX_INLINE void Detatch(const VLCEventHandler &h) { return Detatch(h.EventType, h.Callback, h.UserData); }
+	VLCX_INLINE void Detach(const VLCEventHandler &h) { return Detach(h.EventType, h.Callback, h.UserData); }
 };
 
 template<VLCKind Kind>
 struct VLCEventManager : public VLCEventManagerBase, public VLC<Kind> {
 	static_assert(VLCHasEventManager(Kind), "kind does not have event manager");
-	VLCX_INLINE explicit VLCEventManager(const VLC<Kind> & outer), Implementation(outer), VLCEventManagerBase(outer.GetEventManagerStructure()) {
+	VLCX_INLINE explicit VLCEventManager(const VLC<Kind> & outer) : Implementation(outer), VLCEventManagerBase(outer.GetEventManagerStructure()) {
 	}
 	VLCX_INLINE VLCEventManager(const VLCEventManager &copy) : Implementation(copy), VLCEventManagerBase(copy.GetEventManagerStructure()) {}
 
@@ -140,7 +161,9 @@ protected:
 		ConstructorRetain,
 	};
 private:
-	template<typename Struct> friend struct VLCWrapper<Struct>;
+#define Macro_LIBVLCX_WrapperFriends(name,...) friend struct VLCWrapper<__VA_ARGS__>;
+	Macro_LIBVLCX_EnumerateValid_VLCKind(Macro_LIBVLCX_WrapperFriends)
+#undef Macro_LIBVLCX_WrapperFriends
 	
 	VLCX_INLINE bool DoRetain() const {
 		return nullptr != Ptr && 0u != Alive && 0u == RefCount++;
@@ -158,9 +181,9 @@ private:
 
 	}
 	template<typename Struct>
-	constexpr VLCObject(Struct*const&ptr) : VLCObject(ptr, VLCKindOf<Struct>()) {}
+	constexpr VLCObject(Struct*const&ptr) : VLCObject(ptr, VLCStructKindOf<Struct>()) {}
 	template<typename Struct>
-	constexpr VLCObject(EConstructorRetain, Struct*const&ptr) : VLCObject(ptr, VLCKindOf<Struct>()) {}
+	constexpr VLCObject(EConstructorRetain, Struct*const&ptr) : VLCObject(ptr, VLCStructKindOf<Struct>()) {}
 public:
 
 	VLCX_INLINE uint32_t &IntTag() { return VLCTag::Int; }
@@ -195,11 +218,11 @@ public:
 	VLCX_INLINE constexpr TStruct *const GetStructureUnchecked() const { return (TStruct*)Ptr; }
 protected:
 	VLCX_INLINE void Retain() const {
-		if (DoRetain()) VLCRetain();
+		if (DoRetain()) VLCRetain(GetStructureUnchecked());
 	}
 
 	VLCX_INLINE void Release() const {
-		if (DoRelease()) VLCRelease();
+		if (DoRelease()) VLCRelease(GetStructureUnchecked());
 	}
 };
 

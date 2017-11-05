@@ -265,7 +265,7 @@ struct VLC<VLCKind::Media> : public VLCWrapper<libvlc_media_t> {
 		libvlc_media_set_meta(GetStructure(), Entry, Value);
 	}
 	template<libvlc_meta_t Entry>
-	VLCX_INLINE VLCString GetMeta() const { return GetMeta(Entry); }
+	VLCX_INLINE VLCString &&GetMeta() const { return GetMeta(Entry); }
 
 	template<libvlc_meta_t Entry>
 	VLCX_INLINE void SetMeta(const char *const& Value) { SetMeta(Entry, Value); }

@@ -281,8 +281,8 @@ struct VLCEventManager : public VLCEventManagerBase, public VLC<Kind> {
 
 	// initializes this event manager from the VLC<> kind. (retains a reference to the underlying type by copying it to this instance).
 	// this also works as a copy constructor.
-	VLCX_INLINE VLCEventManager(const VLC<Kind> & outer) 
-		: Implementation(outer)
+	VLCX_INLINE VLCEventManager(const VLC & outer) 
+		: VLC(outer)
 		, VLCEventManagerBase(outer.GetEventManagerStructure()) { }
 
 	// allows you to add an event handler. if you need the return value of the removal use Attach instead.

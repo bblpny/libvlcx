@@ -84,19 +84,19 @@ template<> struct VLC<VLCKind::Instance>
 	VLCX_INLINE VLC() : VLC(0, nullptr) {}
 	VLCX_INLINE ~VLC() { Release(); }
 
-	VLCX_INLINE VLCAudioOutputList GetAudioOutputList() const {
+	VLCX_INLINE VLCAudioOutputList && GetAudioOutputList() const {
 		return libvlc_audio_output_list_get(GetStructure());
 	}
 
-	VLCX_INLINE VLCAudioOutputDeviceList GetAudioOutputDeviceList(const char*const output) const {
+	VLCX_INLINE VLCAudioOutputDeviceList && GetAudioOutputDeviceList(const char*const output) const {
 		return libvlc_audio_output_device_list_get(GetStructure(), output);
 	}
 
-	VLCX_INLINE VLCModuleDescriptionList GetAudioFilterList()const {
+	VLCX_INLINE VLCModuleDescriptionList && GetAudioFilterList()const {
 		return libvlc_audio_filter_list_get(GetStructure());
 	}
 
-	VLCX_INLINE VLCModuleDescriptionList GetVideoFilterList()const {
+	VLCX_INLINE VLCModuleDescriptionList && GetVideoFilterList()const {
 		return libvlc_video_filter_list_get(GetStructure());
 	}
 
@@ -254,13 +254,13 @@ struct VLC<VLCKind::Media> : public VLCWrapper<libvlc_media_t> {
 	Macro_LIBVLCX_VLCBody(libvlc_media_event_manager);
 
 	VLCX_INLINE libvlc_time_t GetDuration() const { return libvlc_media_get_duration(GetStructure()); }
-	VLCX_INLINE VLCString GetMRL() const { return libvlc_media_get_mrl(GetStructure()); }
+	VLCX_INLINE VLCString && GetMRL() const { return libvlc_media_get_mrl(GetStructure()); }
 	VLCX_INLINE void Parse() { libvlc_media_parse(GetStructure()); }
 	VLCX_INLINE void BeginParse() { libvlc_media_parse_async(GetStructure()); }
 	VLCX_INLINE void Parse(bool asyncronous) { if (asyncronous)BeginParse();else Parse(); }
 	VLCX_INLINE VLCBoolean IsParsed() const { return VLCBool(libvlc_media_is_parsed(GetStructure())); }
 	VLCX_INLINE libvlc_state_t GetState() const { return libvlc_media_get_state(GetStructure()); }
-	VLCX_INLINE VLCString GetMeta(const libvlc_meta_t Entry)const { return libvlc_media_get_meta(GetStructure(), Entry); }
+	VLCX_INLINE VLCString && GetMeta(const libvlc_meta_t Entry)const { return libvlc_media_get_meta(GetStructure(), Entry); }
 	VLCX_INLINE void SetMeta(const libvlc_meta_t Entry, const char *const& Value) {
 		libvlc_media_set_meta(GetStructure(), Entry, Value);
 	}
@@ -341,7 +341,7 @@ struct VLC<VLCKind::MediaPlayer> : public VLCWrapper<libvlc_media_player_t> {
 	VLCX_INLINE VLCResult GetCursor(int &x, int &y, const unsigned num = 0)const { return VLCRes(libvlc_video_get_cursor(GetStructure(), num, &x, &y));/*<--*/ }
 	VLCX_INLINE float GetVideoScale()const { return libvlc_video_get_scale(GetStructure()); }
 	VLCX_INLINE void SetVideoScale(const float factor) { libvlc_video_set_scale(GetStructure(), factor); }
-	VLCX_INLINE VLCString GetAspectRatio()const { return libvlc_video_get_aspect_ratio(GetStructure()); }
+	VLCX_INLINE VLCString && GetAspectRatio()const { return libvlc_video_get_aspect_ratio(GetStructure()); }
 	VLCX_INLINE void SetAspectRatio(const char*const aspect) { libvlc_video_set_aspect_ratio(GetStructure(), aspect); }
 
 	VLCX_INLINE int GetSPU()const { return libvlc_video_get_spu(GetStructure()); }
@@ -354,7 +354,7 @@ struct VLC<VLCKind::MediaPlayer> : public VLCWrapper<libvlc_media_player_t> {
 	VLCX_INLINE int SetSubtitleFile(const char *const subtitle) { return libvlc_video_set_subtitle_file(GetStructure(), subtitle); }
 	VLCX_INLINE int64_t GetSPUDelay()const { return libvlc_video_get_spu_delay(GetStructure()); }
 	VLCX_INLINE VLCResult SetSPUDelay(const int64_t &delay) { return VLCRes(libvlc_video_set_spu_delay(GetStructure(), delay));/*<--*/ }
-	VLCX_INLINE VLCString GetCropGeometry()const { return libvlc_video_get_crop_geometry(GetStructure()); }
+	VLCX_INLINE VLCString && GetCropGeometry()const { return libvlc_video_get_crop_geometry(GetStructure()); }
 	VLCX_INLINE void SetCropGeometry(const char *const geometry) { libvlc_video_set_crop_geometry(GetStructure(), geometry); }
 	VLCX_INLINE int GetVideoTrack()const { return libvlc_video_get_track(GetStructure()); }
 	VLCX_INLINE int GetTitle() const { return libvlc_media_player_get_title(GetStructure()); }
@@ -369,10 +369,10 @@ struct VLC<VLCKind::MediaPlayer> : public VLCWrapper<libvlc_media_player_t> {
 	VLCX_INLINE libvlc_time_t GetLength() const { return libvlc_media_player_get_length(GetStructure()); }
 	VLCX_INLINE void SetTime(const libvlc_time_t &time)const { libvlc_media_player_set_time(GetStructure(), time); }
 	VLCX_INLINE VLCBoolean WillPlay()const { return VLCBool(libvlc_media_player_will_play(GetStructure())); }
-	VLCX_INLINE VLCTrackDescriptionList GetTitleDescription() const { return libvlc_video_get_title_description(GetStructure()); }
-	VLCX_INLINE VLCTrackDescriptionList GetVideoTrackDescription() const { return libvlc_video_get_track_description(GetStructure()); }
-	VLCX_INLINE VLCTrackDescriptionList GetSPUDescription() const { return libvlc_video_get_spu_description(GetStructure()); }
-	VLCX_INLINE VLCTrackDescriptionList GetChapterDescription(const int title) const { return libvlc_video_get_chapter_description(GetStructure(), title); }
+	VLCX_INLINE VLCTrackDescriptionList && GetTitleDescription() const { return libvlc_video_get_title_description(GetStructure()); }
+	VLCX_INLINE VLCTrackDescriptionList && GetVideoTrackDescription() const { return libvlc_video_get_track_description(GetStructure()); }
+	VLCX_INLINE VLCTrackDescriptionList && GetSPUDescription() const { return libvlc_video_get_spu_description(GetStructure()); }
+	VLCX_INLINE VLCTrackDescriptionList && GetChapterDescription(const int title) const { return libvlc_video_get_chapter_description(GetStructure(), title); }
 	VLCX_INLINE void SetTitleDisplay(libvlc_position_t position, unsigned int timeout) {
 		libvlc_media_player_set_video_title_display(GetStructure(), position, timeout);
 	}
@@ -432,7 +432,7 @@ struct VLC<VLCKind::MediaPlayer> : public VLCWrapper<libvlc_media_player_t> {
 	VLCX_INLINE int GetMarqueeInt(const VLCEnum<libvlc_video_marquee_option_t> option)const {
 		return libvlc_video_get_marquee_int(GetStructure(), option);
 	}
-	VLCX_INLINE VLCString GetMarqueeString(const VLCEnum<libvlc_video_marquee_option_t> option)const {
+	VLCX_INLINE VLCString && GetMarqueeString(const VLCEnum<libvlc_video_marquee_option_t> option)const {
 		return libvlc_video_get_marquee_string(GetStructure(), option);
 	}
 	VLCX_INLINE void SetMarqueeInt(const VLCEnum<libvlc_video_marquee_option_t> option, const int value) {
@@ -509,7 +509,7 @@ struct VLC<VLCKind::MediaPlayer> : public VLCWrapper<libvlc_media_player_t> {
 	VLCX_INLINE int GetVolume()const { return libvlc_audio_get_volume(GetStructure()); }
 	VLCX_INLINE VLCResult SetVolume(const int value) { return VLCRes(libvlc_audio_set_volume(GetStructure(), value));/*<--*/ }
 	VLCX_INLINE int GetAudioTrackCount()const { return libvlc_audio_get_track_count(GetStructure()); }
-	VLCX_INLINE VLCTrackDescriptionList GetAudioTrackDescription() const { return libvlc_audio_get_track_description(GetStructure()); }
+	VLCX_INLINE VLCTrackDescriptionList && GetAudioTrackDescription() const { return libvlc_audio_get_track_description(GetStructure()); }
 	VLCX_INLINE int GetAudioTrack()const { return libvlc_audio_get_track(GetStructure()); }
 	VLCX_INLINE VLCResult SetAudioTrack(const int track) { return VLCRes(libvlc_audio_set_track(GetStructure(), track));/*<--*/ }
 	VLCX_INLINE VLCEnumI<libvlc_audio_output_channel_t> GetAudioChannel()const { return libvlc_audio_get_channel(GetStructure()); }

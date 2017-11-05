@@ -89,17 +89,17 @@ private:/*EXTREMELY PRIVATE*/
 
 	// extremely private. invoked from other constructor.
 	VLCX_EXPRESSION VLCObject(void*const& ptr, const VLCKind kind)
-		: Kind(kind)
-		, Ptr(ptr)
+		: Ptr(ptr)
 		, RefCount(0)
-		, Alive(nullptr == ptr ? 0 : 1) {}
+		, Alive(nullptr == ptr ? 0 : 1)
+		, Kind(kind) {}
 
 	// extremely private. invoked from other constructor.
 	VLCX_EXPRESSION VLCObject(void*const& ptr, const EConstructorRetain, const VLCKind kind)
-		: Kind(kind)
-		, Ptr(ptr)
+		: Ptr(ptr)
 		, RefCount(nullptr == ptr ? 0 : 1)
-		, Alive(nullptr == ptr ? 0 : 1) {}
+		, Alive(nullptr == ptr ? 0 : 1)
+		, Kind(kind) {}
 
 private:/*PROTECTED TO VLCWrapper<>*/
 
@@ -133,7 +133,7 @@ private:/*PROTECTED TO VLCWrapper<>*/
 	VLCX_EXPRESSION VLCObject(EConstructorRetain, Struct*const&ptr)
 		: VLCObject(ptr, ConstructorRetain, VLCStructKindOf<Struct>()) {}
 
-	VLCX_EXPRESSION VLCObject() : Kind(VLCKind::Null), Ptr(nullptr), Alive(0), RefCount(0) {}
+	VLCX_EXPRESSION VLCObject() :  Ptr(nullptr),RefCount(0), Alive(0), Kind(VLCKind::Null) {}
 };
 
 // just ensuring the size is correct.
@@ -211,7 +211,10 @@ LIBVLCX_API struct VLCEventHandler {
 	VLCX_EXPRESSION VLCEventHandler(
 		const libvlc_event_type_t eventType,
 		const libvlc_callback_t callback,
-		void*const userData) : Callback(callback), EventType(eventType), UserData(userData) {}
+		void*const userData) 
+		: Callback(callback)
+		, UserData(userData)
+		, EventType(eventType){}
 
 	// copy constructor.
 	VLCX_EXPRESSION VLCEventHandler(const VLCEventHandler & copy)
@@ -300,6 +303,7 @@ struct VLCEventManager : public VLCEventManagerBase, public VLC<Kind> {
 			if (TStruct *const m = GetStructure())														\
 				if(libvlc_event_manager_t *const o = EventManagerFunction(m))							\
 					return o;																			\
+			return nullptr;																				\
 		}																								\
 		friend struct VLCEventManager<Kind>;															\
 	public:																								\

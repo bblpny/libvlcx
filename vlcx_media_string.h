@@ -45,7 +45,7 @@ private:
 
 #	define Macro_LIBVLCX_BindMediaString(Usage,.../*operation*/)	\
 using VLCMedia##Usage##String = VLCMediaString<VLCMediaUse::Usage>;	\
-VLCX_INLINE libvlc_media_t *VLCMedia##Usage##String::Open(			\
+template<> VLCX_INLINE libvlc_media_t *VLCMedia##Usage##String::Open(			\
 	libvlc_instance_t*const& instance,								\
 	const char *const& sz){											\
 	return (nullptr==instance||nullptr==sz)?nullptr:__VA_ARGS__;	\

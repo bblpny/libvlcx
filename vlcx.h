@@ -9,473 +9,455 @@
 #	include "vlcx_enum.h"
 #	include "vlcx_alloc.h"
 #	include "vlcx_object.h"
+#	include "vlcx_media_string.h"
+#	include "vlcx_drawable.h"
 
 LIBVLCX_NAMESPACE(START)
 
-template<> FORCEINLINE void VLCFreeList(libvlc_audio_output_t*const &adr) {
-	libvlc_audio_output_list_release(adr);
-}
-template<> FORCEINLINE void VLCFreeSingle(libvlc_track_description_t*const &adr) {
-	//libvlc_track_description_release(adr);
-	libvlc_track_description_list_release(adr);
-}
-template<> FORCEINLINE void VLCFreeList(libvlc_track_description_t*const &adr) {
-	libvlc_track_description_list_release(adr);
-}
-template<> FORCEINLINE void VLCFreeList(libvlc_audio_output_device_t*const &adr) {
-	libvlc_audio_output_device_list_release(adr);
-}
-template<> FORCEINLINE void VLCFreeList(libvlc_module_description_t*const &adr) {
-	libvlc_module_description_list_release(adr);
-}
-template<> FORCEINLINE void VLCFreeList(char*const &adr) {
-	libvlc_free(adr);
-}
+Macro_LIBVLCX_BindKind(Instance,
+	libvlc_instance_t,
+	libvlc_retain,
+	libvlc_release);
 
-using VLCString = VLCAllocList<char>;
+Macro_LIBVLCX_BindKind(Media,
+	libvlc_media_t,
+	libvlc_media_retain,
+	libvlc_media_release);
 
-template<> FORCEINLINE void VLCRelease(libvlc_instance_t*const&v) { libvlc_release(v); }
-template<> FORCEINLINE void VLCRetain(libvlc_instance_t*const&v) { libvlc_retain(v); }
+Macro_LIBVLCX_BindKind(MediaPlayer,
+	libvlc_media_player_t,
+	libvlc_media_player_retain,
+	libvlc_media_player_release);
 
-template<> FORCEINLINE void VLCRelease(libvlc_media_player_t*const&v) { libvlc_media_player_release(v); }
-template<> FORCEINLINE void VLCRetain(libvlc_media_player_t*const&v) { libvlc_media_player_retain(v); }
+// no longer need the macro as there are finite things to choose from.
+#	undef Macro_LIBVLCX_BindKind
 
-template<> FORCEINLINE void VLCRelease(libvlc_media_t*const&v) { libvlc_media_release(v); }
-template<> FORCEINLINE void VLCRetain(libvlc_media_t*const&v) { libvlc_media_retain(v); }
+Macro_LIBVLCX_BindAlloc(
+	libvlc_audio_output_t,
+	libvlc_audio_output_list_release,
+	VLCAudioOutputList);
 
-template<>
-struct VLC<VLCKind::Library> : public VLCWrapper<libvlc_instance_t> {
-	FORCEINLINE VLC(int argc = 0, const char *const *argv = nullptr)
-		: Wrapper(ConstructorRetain, libvlc_new(argc, argv)) {}
+Macro_LIBVLCX_BindAlloc(
+	libvlc_track_description_t,
+	libvlc_track_description_list_release,
+	VLCTrackDescriptionList);
+
+Macro_LIBVLCX_BindAlloc(
+	libvlc_audio_output_device_t,
+	libvlc_audio_output_device_list_release,
+	VLCAudioOutputDeviceList);
+
+Macro_LIBVLCX_BindAlloc(
+	libvlc_module_description_t,
+	libvlc_module_description_list_release,
+	VLCModuleDescriptionList);
+
+Macro_LIBVLCX_BindAlloc(
+	char,
+	libvlc_free,
+	VLCString);
+
+
+Macro_LIBVLCX_BindMediaString(Path, libvlc_media_new_path(instance, sz))
+Macro_LIBVLCX_BindMediaString(Location, libvlc_media_new_location(instance, sz))
+Macro_LIBVLCX_BindMediaString(NodeName, libvlc_media_new_as_node(instance, sz))
+// no longer need the macro as there are finite things to choose from.
+#	undef Macro_LIBVLCX_BindMediaString
+
+Macro_LIBVLCX_BindDrawable(NSObject, void*, libvlc_media_player_get_nsobject, libvlc_media_player_set_nsobject);
+Macro_LIBVLCX_BindDrawable(HWND, void*, libvlc_media_player_get_hwnd, libvlc_media_player_set_hwnd);
+Macro_LIBVLCX_BindDrawable(XWindow, uint32_t, libvlc_media_player_get_xwindow, libvlc_media_player_set_xwindow);
+Macro_LIBVLCX_BindDrawable(AGL, uint32_t, libvlc_media_player_get_agl, libvlc_media_player_set_agl);
+// no longer need the macro as there are finite things to choose from.
+#	undef Macro_LIBVLCX_BindDrawable
+
+template<> struct VLC<VLCKind::Instance> 
+	: public VLCWrapper<libvlc_instance_t> 
+{
+	// construct a new vlc lib instance with command line arguments.
+	VLCX_INLINE VLC(const int argc, const char *const *const &argv)
+		: Wrapper(ConstructorRetain, libvlc_new(argc, 0==argc?nullptr:argv)) {}
 	template<size_t argc>
-	FORCEINLINE VLC(const char *const (&argv)[argc]) : VLC((int)argc, 0== argc?nullptr:&argv[0]) {};
-	FORCEINLINE VLC(TStruct *const& retain) : Wrapper(retain) { Retain(); }
-	FORCEINLINE VLC(const VLC& copy) : Wrapper(copy.GetStructure()) { Retain(); }
-	FORCEINLINE ~VLC() { Release(); }
+	VLCX_INLINE VLC(const char *const (&argv)[argc]) : VLC((int)argc, 0== argc?nullptr:&argv[0]) {};
+	VLCX_INLINE VLC(TStruct *const& retain) : Wrapper(retain) {}
+	VLCX_INLINE VLC(const VLC& copy) : Wrapper(copy.GetStructure()) {}
+	VLCX_INLINE VLC() : VLC(0, nullptr) {}
+	VLCX_INLINE ~VLC() { Release(); }
 
-	FORCEINLINE VLCAllocList<libvlc_audio_output_t> GetAudioOutputList() const {
+	VLCX_INLINE VLCAudioOutputList GetAudioOutputList() const {
 		return libvlc_audio_output_list_get(GetStructure());
 	}
 
-	FORCEINLINE VLCAllocList<libvlc_audio_output_device_t> GetAudioOutputDeviceList(const char*const output) const {
+	VLCX_INLINE VLCAudioOutputDeviceList GetAudioOutputDeviceList(const char*const output) const {
 		return libvlc_audio_output_device_list_get(GetStructure(), output);
 	}
 
-	FORCEINLINE VLCAllocList<libvlc_module_description_t> GetAudioFilterList()const {
+	VLCX_INLINE VLCModuleDescriptionList GetAudioFilterList()const {
 		return libvlc_audio_filter_list_get(GetStructure());
 	}
 
-	FORCEINLINE VLCAllocList<libvlc_module_description_t> GetVideoFilterList()const {
+	VLCX_INLINE VLCModuleDescriptionList GetVideoFilterList()const {
 		return libvlc_video_filter_list_get(GetStructure());
 	}
 
-	FORCEINLINE void SetLogCallback(const libvlc_log_cb callback, void*const data) {
+	VLCX_INLINE void SetLogCallback(const libvlc_log_cb callback, void*const data) {
 		libvlc_log_set(GetStructure(), callback, data);
 	}
 
-	FORCEINLINE void SetLogFile(FILE*const stream) {
+	VLCX_INLINE void SetLogFile(FILE*const stream) {
 		libvlc_log_set_file(GetStructure(), stream);
 	}
-	FORCEINLINE void UnsetLogCallback() {
+	VLCX_INLINE void UnsetLogCallback() {
 		libvlc_log_unset(GetStructure());
 	}
-	FORCEINLINE void SetUserAgent(
+	VLCX_INLINE void SetUserAgent(
 		const char *const name, const char *const http) {
 		libvlc_set_user_agent(GetStructure(), name, http);
 	}
-	FORCEINLINE void SetAppId(const char *const id,
+	VLCX_INLINE void SetAppId(const char *const id,
 		const char *const version, const char *const icon) {
 		libvlc_set_app_id(GetStructure(),id, version, icon);
 	}
-	FORCEINLINE void SetExitHandler(void(*cb) (void *), void *opaque) {
+	VLCX_INLINE void SetExitHandler(void(*cb) (void *), void *opaque) {
 		libvlc_set_exit_handler(GetStructure(), cb, opaque);
 	}
-	FORCEINLINE void Wait()const {
+	VLCX_INLINE void Wait()const {
 		libvlc_wait(GetStructure());
 	}
-	FORCEINLINE bool AddInterface(const char*const name) {
-		return libvlc_add_intf(GetStructure(), name) ? false : true;/*<--*/
+	VLCX_INLINE VLCResult AddInterface(const char*const name) {
+		return VLCRes(libvlc_add_intf(GetStructure(), name));/*<--*/
 	}
 
 	/*VLM*/
-	FORCEINLINE bool AddBroadcast(
+	VLCX_INLINE VLCResult AddMediaBroadcast(
 		const char *const name, const char *const input,
 		const char *const output, const int options,
 		const char * const*const  ppsz_options,
 		const bool enabled, const bool loop) {
-		return libvlc_vlm_add_broadcast(GetStructure(),
+		return VLCRes(libvlc_vlm_add_broadcast(GetStructure(),
 			name, input,
 			output, options,
 			ppsz_options,
 			enabled ? (int)1 : (int)0,
-			loop ? (int)1 : (int)0) ? false : true;/*<--*/
+			loop ? (int)1 : (int)0));/*<--*/
 	}
-	FORCEINLINE bool AddVOD(
+	VLCX_INLINE VLCResult AddMediaVOD(
 		const char *const name, const char *const input,
 		const int options, const char * const* const ppsz_options,
 		const bool enabled, const char *const mux) {
-		return libvlc_vlm_add_vod(GetStructure(),
-			name, input, options, ppsz_options, enabled ? (int)1 : (int)0, mux) ? false : true;/*<--*/
+		return VLCRes(libvlc_vlm_add_vod(GetStructure(),
+			name, input, options, ppsz_options, enabled ? (int)1 : (int)0, mux));/*<--*/
 	}
-	FORCEINLINE bool AddInput(
+	VLCX_INLINE VLCResult AddMediaInput(
 		const char *const name, const char *const input) {
-		return libvlc_vlm_add_input(GetStructure(), name, input) ? false : true;/*<--*/
+		return VLCRes(libvlc_vlm_add_input(GetStructure(), name, input));/*<--*/
 	}
-	FORCEINLINE bool DeleteMedia(const char *const name) {
-		return libvlc_vlm_del_media(GetStructure(), name) ? false : true;/*<--*/
+	VLCX_INLINE VLCResult DeleteMedia(const char *const name) {
+		return VLCRes(libvlc_vlm_del_media(GetStructure(), name));/*<--*/
 	}
-	FORCEINLINE bool SetEnabled(const char *const name, const bool enabled) {
-		return libvlc_vlm_set_enabled(GetStructure(), name, enabled ? (int)1 : (int)0) ? false : true;/*<--*/
+	VLCX_INLINE VLCResult SetMediaEnabled(const char *const name, const bool enabled) {
+		return VLCRes(libvlc_vlm_set_enabled(GetStructure(), name, enabled ? (int)1 : (int)0));/*<--*/
 	}
-	FORCEINLINE bool SetOutput(const char *const name, const char *const output) {
-		return libvlc_vlm_set_output(GetStructure(), name, output) ? false : true;/*<--*/
+	VLCX_INLINE VLCResult SetMediaOutput(const char *const name, const char *const output) {
+		return VLCRes(libvlc_vlm_set_output(GetStructure(), name, output));/*<--*/
 	}
-	FORCEINLINE bool SetInput(const char *const name, const char *const input) {
-		return libvlc_vlm_set_input(GetStructure(), name, input) ? false : true;/*<--*/
+	VLCX_INLINE VLCResult SetMediaInput(const char *const name, const char *const input) {
+		return VLCRes(libvlc_vlm_set_input(GetStructure(), name, input));/*<--*/
 	}
-	FORCEINLINE bool SetMux(const char *const name, const char *const mux) {
-		return libvlc_vlm_set_mux(GetStructure(), name, mux) ? false : true;/*<--*/
+	VLCX_INLINE VLCResult SetMediaMux(const char *const name, const char *const mux) {
+		return VLCRes(libvlc_vlm_set_mux(GetStructure(), name, mux));/*<--*/
 	}
-	FORCEINLINE bool SetLoop(
+	VLCX_INLINE VLCResult SetMediaLoop(
 		const char *const name, const bool enabled
 	) {
-		return libvlc_vlm_set_loop(GetStructure(), name, enabled ? (int)1 : (int)0) ? false : true;/*<--*/
+		return VLCRes(libvlc_vlm_set_loop(GetStructure(), name, enabled ? (int)1 : (int)0));/*<--*/
 	}
-	FORCEINLINE bool ChangeMedia(
+	VLCX_INLINE VLCResult ChangeMedia(
 		const char *const name, const char *const input,
 		const char *const output, const int options,
 		const char * const*const  ppsz_options,
 		const bool enabled, const bool loop) {
-		return libvlc_vlm_change_media(GetStructure(),
+		return VLCRes(libvlc_vlm_change_media(GetStructure(),
 			name, input,
 			output, options,
 			ppsz_options,
 			enabled ? (int)1 : (int)0,
-			loop ? (int)1 : (int)0) ? false : true;/*<--*/
+			loop ? (int)1 : (int)0));/*<--*/
 	}
-	FORCEINLINE bool PlayMedia(const char *const name) {
-		return libvlc_vlm_play_media(GetStructure(), name) ? false : true;/*<--*/
+	VLCX_INLINE VLCResult PlayMedia(const char *const name) {
+		return VLCRes(libvlc_vlm_play_media(GetStructure(), name));/*<--*/
 	}
-	FORCEINLINE bool StopMedia(const char *const name) {
-		return libvlc_vlm_stop_media(GetStructure(), name) ? false : true;/*<--*/
+	VLCX_INLINE VLCResult StopMedia(const char *const name) {
+		return VLCRes(libvlc_vlm_stop_media(GetStructure(), name));/*<--*/
 	}
-	FORCEINLINE bool PauseMedia(const char *const name) {
-		return libvlc_vlm_pause_media(GetStructure(), name) ? false : true;/*<--*/
+	VLCX_INLINE VLCResult PauseMedia(const char *const name) {
+		return VLCRes(libvlc_vlm_pause_media(GetStructure(), name));/*<--*/
 	}
-	FORCEINLINE bool SeekMedia(const char *const name, const float percentage) {
-		return libvlc_vlm_seek_media(GetStructure(), name, percentage) ? false : true;/*<--*/
+	VLCX_INLINE VLCResult SeekMedia(const char *const name, const float percentage) {
+		return VLCRes(libvlc_vlm_seek_media(GetStructure(), name, percentage));/*<--*/
 	}
-	FORCEINLINE float GetMediaInstancePosition(const char *const name, const int instance_id) const {
+	VLCX_INLINE float GetMediaPosition(const char *const name, const int instance_id) const {
 		return libvlc_vlm_get_media_instance_position(GetStructure(), name, instance_id);
 	}
-	FORCEINLINE int GetMediaInstanceTime(const char *const name, const int instance_id) const {
+	VLCX_INLINE int GetMediaTime(const char *const name, const int instance_id) const {
 		return libvlc_vlm_get_media_instance_time(GetStructure(), name, instance_id);
 	}
-	FORCEINLINE int GetMediaInstanceLength(const char *const name, const int instance_id) const {
+	VLCX_INLINE int GetMediaLength(const char *const name, const int instance_id) const {
 		return libvlc_vlm_get_media_instance_length(GetStructure(), name, instance_id);
 	}
-	FORCEINLINE int GetMediaInstanceRate(const char *const name, const int instance_id) const {
+	VLCX_INLINE int GetMediaRate(const char *const name, const int instance_id) const {
 		return libvlc_vlm_get_media_instance_rate(GetStructure(), name, instance_id);
 	}
-	FORCEINLINE const char * ShowMedia(const char *const name) const {
+	VLCX_INLINE const char * ShowMedia(const char *const name) const {
 		return libvlc_vlm_show_media(GetStructure(), name);/*<--*/
 	}
 
-	Macro_LIBVLCX_ExposeEventManager(libvlc_vlm_get_event_manager);
+	Macro_LIBVLCX_VLCBody(libvlc_vlm_get_event_manager);
 };
-using VLCLibrary = VLC<VLCKind::Library>;
-
-
-enum class VLCMediaStringUsage : uint8_t {
-	Path,
-	Location,
-	NodeName,
-};
-
-template<VLCMediaStringUsage StrUse>
-struct VLCMediaString {
-	const char *const& Sz;
-	FORCEINLINE constexpr VLCMediaString(const char *const& sz) : Sz(sz) { }
-	FORCEINLINE constexpr operator const char *const &()const { return Sz; }
-	static FORCEINLINE libvlc_media_t *Open(libvlc_instance_t*const& instance, const char *const& sz);
-	FORCEINLINE libvlc_media_t *Open(libvlc_instance_t*const& instance) const { return Open(instance, Sz); }
-};
-using VLCMediaPathString = VLCMediaString<VLCMediaStringUsage::Path>;
-using VLCMediaLocationString = VLCMediaString<VLCMediaStringUsage::Location>;
-using VLCMediaNodeNameString = VLCMediaString<VLCMediaStringUsage::NodeName>;
-#define Macro_VLCImplementMediaString(Usage,.../*operation*/) \
-using VLCMedia##Usage##String = VLCMediaString<VLCMediaStringUsage::Usage>; \
-FORCEINLINE libvlc_media_t *VLCMedia##Usage##String::Open(libvlc_instance_t*const& instance, const char *const& sz){ \
-	return (nullptr==instance||nullptr==sz)?nullptr:__VA_ARGS__; \
-}
-Macro_VLCImplementMediaString(Path, libvlc_media_new_path(instance, sz))
-Macro_VLCImplementMediaString(Location, libvlc_media_new_location(instance, sz))
-Macro_VLCImplementMediaString(NodeName, libvlc_media_new_as_node(instance, sz))
-#undef Macro_VLCImplementMediaString
-
 
 template<>
 struct VLC<VLCKind::Media> : public VLCWrapper<libvlc_media_t> {
+	
 	enum EDuplicate { Duplicate, };
 
-	FORCEINLINE VLC(VLCLibrary::TStruct *const &instance, const char *const& Sz, const VLCMediaStringUsage Type)
+#	define Macro_LIBVLCX_MediaUseCase(Name) Type == VLCMediaUse::Name ? VLCMedia##Name##String::Open(instance, Sz)
+
+	VLCX_INLINE VLC(VLCStruct<VLCKind::Instance> *const &instance, const char *const& Sz, const VLCMediaUse Type)
 		: Wrapper(ConstructorRetain,
-			Type == VLCMediaStringUsage::Location ? VLCMediaLocationString::Open(instance, Sz) :
-			Type == VLCMediaStringUsage::NodeName ? VLCMediaNodeNameString::Open(instance, Sz) :
-			Type == VLCMediaStringUsage::Path ? VLCMediaPathString::Open(instance, Sz) : nullptr)
-	{
+			Macro_LIBVLCX_Enumerate_VLCMediaUse(Macro_LIBVLCX_MediaUseCase, : ) : nullptr) {
+#	undef Macro_LIBVLCX_MediaUseCase
 	}
-	template<VLCMediaStringUsage Type>
-	FORCEINLINE VLC(VLCLibrary::TStruct *const &instance, const VLCMediaString<Type> & Sz)
+	template<VLCMediaUse Type>
+	VLCX_INLINE VLC(VLCStruct<VLCKind::Instance> *const &instance, const VLCMediaString<Type> & Sz)
 		: Wrapper(ConstructorRetain, Sz.Open(instance)) {}
 
-	template<VLCMediaStringUsage Type>
-	FORCEINLINE VLC(const VLCLibrary &instance, const VLCMediaString<Type> & Sz)
+	template<VLCMediaUse Type>
+	VLCX_INLINE VLC(const VLCInstance &instance, const VLCMediaString<Type> & Sz)
 		: Wrapper(ConstructorRetain, Sz.Open(instance.GetStructure())) {}
 
-	FORCEINLINE VLC(const VLCLibrary &instance, const char *const& Sz, const VLCMediaStringUsage Type) : VLC(instance.GetStructure(), Sz, Type) {}
+	VLCX_INLINE VLC(const VLCInstance &instance, const char *const& Sz, const VLCMediaUse Type)
+		: VLC(instance.GetStructure(), Sz, Type) {}
 
-	FORCEINLINE VLC(VLCLibrary::TStruct *const &instance, const int Fd)
+	VLCX_INLINE VLC(VLCStruct<VLCKind::Instance> *const &instance, const int Fd)
 		: Wrapper(ConstructorRetain,
 			nullptr != instance ? libvlc_media_new_fd(instance, Fd) : nullptr) {}
-	FORCEINLINE VLC(const VLCLibrary &instance, const int Fd) : VLC(instance.GetStructure(), Fd) {}
-	explicit FORCEINLINE VLC(TStruct *const &ptr) : Wrapper(ptr) { Retain(); }
-	FORCEINLINE VLC(EDuplicate, TStruct*const&copy) : Wrapper(ConstructorRetain, libvlc_media_duplicate(copy)){};
-	FORCEINLINE VLC(EDuplicate, const VLC&copy) : Wrapper(ConstructorRetain, libvlc_media_duplicate(copy.GetStructure())){};
-	FORCEINLINE VLC(const VLC&copy) : Wrapper(copy) {
-		Retain();
-	}
-	FORCEINLINE ~VLC() {
-		Release();
-	}
-	Macro_LIBVLCX_ExposeEventManager(libvlc_media_event_manager);
 
-	FORCEINLINE libvlc_time_t GetDuration() const { return libvlc_media_get_duration(GetStructure()); }
-	FORCEINLINE VLCString GetMRL() const { return libvlc_media_get_mrl(GetStructure()); }
-	FORCEINLINE void Parse() { libvlc_media_parse(GetStructure()); }
-	FORCEINLINE void BeginParse() { libvlc_media_parse_async(GetStructure()); }
-	FORCEINLINE void Parse(bool asyncronous) { if (asyncronous)BeginParse();else Parse(); }
-	FORCEINLINE VLCBoolean IsParsed() const { return VLCBool(libvlc_media_is_parsed(GetStructure())); }
-	FORCEINLINE libvlc_state_t GetState() const { return libvlc_media_get_state(GetStructure()); }
-	FORCEINLINE VLCString GetMeta(const libvlc_meta_t Entry)const { return libvlc_media_get_meta(GetStructure(), Entry); }
-	FORCEINLINE void SetMeta(const libvlc_meta_t Entry, const char *const& Value) {
+	VLCX_INLINE VLC(const VLCInstance &instance, const int Fd) : VLC(instance.GetStructure(), Fd) {}
+
+	explicit VLCX_INLINE VLC(TStruct *const &ptr) : Wrapper(ptr) {}
+
+	VLCX_INLINE VLC(EDuplicate, TStruct*const&copy) : Wrapper(ConstructorRetain, libvlc_media_duplicate(copy)){}
+	VLCX_INLINE VLC(EDuplicate, const VLC&copy) : Wrapper(ConstructorRetain, libvlc_media_duplicate(copy.GetStructure())){}
+	VLCX_INLINE VLC(const VLC&copy) : Wrapper(copy) { }
+	VLCX_INLINE ~VLC() { Release(); }
+
+	Macro_LIBVLCX_VLCBody(libvlc_media_event_manager);
+
+	VLCX_INLINE libvlc_time_t GetDuration() const { return libvlc_media_get_duration(GetStructure()); }
+	VLCX_INLINE VLCString GetMRL() const { return libvlc_media_get_mrl(GetStructure()); }
+	VLCX_INLINE void Parse() { libvlc_media_parse(GetStructure()); }
+	VLCX_INLINE void BeginParse() { libvlc_media_parse_async(GetStructure()); }
+	VLCX_INLINE void Parse(bool asyncronous) { if (asyncronous)BeginParse();else Parse(); }
+	VLCX_INLINE VLCBoolean IsParsed() const { return VLCBool(libvlc_media_is_parsed(GetStructure())); }
+	VLCX_INLINE libvlc_state_t GetState() const { return libvlc_media_get_state(GetStructure()); }
+	VLCX_INLINE VLCString GetMeta(const libvlc_meta_t Entry)const { return libvlc_media_get_meta(GetStructure(), Entry); }
+	VLCX_INLINE void SetMeta(const libvlc_meta_t Entry, const char *const& Value) {
 		libvlc_media_set_meta(GetStructure(), Entry, Value);
 	}
 	template<libvlc_meta_t Entry>
-	FORCEINLINE VLCString GetMeta() const { return GetMeta(Entry); }
+	VLCX_INLINE VLCString GetMeta() const { return GetMeta(Entry); }
 
 	template<libvlc_meta_t Entry>
-	FORCEINLINE void SetMeta(const char *const& Value) { SetMeta(Entry, Value); }
-	FORCEINLINE VLCBoolean SaveMeta() { return VLCBool(libvlc_media_save_meta(GetStructure())); }
+	VLCX_INLINE void SetMeta(const char *const& Value) { SetMeta(Entry, Value); }
+	VLCX_INLINE VLCBoolean SaveMeta() { return VLCBool(libvlc_media_save_meta(GetStructure())); }
 
-	FORCEINLINE void AddOptions(const char *const& Options) { libvlc_media_add_option(GetStructure(), Options); }
-	FORCEINLINE void AddOptionFlag(const char *const& Options, unsigned int Flags) { libvlc_media_add_option_flag(GetStructure(), Options, Flags); }
-	FORCEINLINE VLCBoolean GetStats(libvlc_media_stats_t &stats) const { return VLCBool(libvlc_media_get_stats(GetStructure(), &stats)); }
-	FORCEINLINE libvlc_media_stats_t GetStats(bool &got) const {
+	VLCX_INLINE void AddOptions(const char *const& Options) { libvlc_media_add_option(GetStructure(), Options); }
+	VLCX_INLINE void AddOptionFlag(const char *const& Options, unsigned int Flags) { libvlc_media_add_option_flag(GetStructure(), Options, Flags); }
+	VLCX_INLINE VLCBoolean GetStats(libvlc_media_stats_t &stats) const { return VLCBool(libvlc_media_get_stats(GetStructure(), &stats)); }
+	VLCX_INLINE libvlc_media_stats_t GetStats(bool &got) const {
 		libvlc_media_stats_t stats{0};
 		got = GetStats(stats);
 		return stats;
 	}
-	FORCEINLINE libvlc_media_stats_t GetStats() const {
+	VLCX_INLINE libvlc_media_stats_t GetStats() const {
 		libvlc_media_stats_t stats{ 0 };
 		GetStats(stats);
 		return stats;
 	}
 
-	FORCEINLINE void *GetUserData()const { return libvlc_media_get_user_data(GetStructure()); }
-	FORCEINLINE void SetUserData(void *const userData) { libvlc_media_set_user_data(GetStructure(),userData); }
+	VLCX_INLINE void *GetUserData()const { return libvlc_media_get_user_data(GetStructure()); }
+	VLCX_INLINE void SetUserData(void *const userData) { libvlc_media_set_user_data(GetStructure(),userData); }
 
 };
-using VLCMedia = VLC<VLCKind::Media>;
-
-enum class VLCDrawableKind : uint8_t {
-	Draw_NSObject=0,
-	Draw_AGL=1,
-	Draw_HWND=2,
-	Draw_XWindow = 3,
-};
-template<typename T> struct VLCDrawableKindHandleInfo { using THandle = T; };
-template<VLCDrawableKind Kind> struct VLCDrawableKindInfo;
-#define Macro_VLCDrawableKind(Kind,Handle,GetF,SetF) \
-template<> struct VLCDrawableKindInfo<VLCDrawableKind::Draw_##Kind> \
-	: public VLCDrawableKindHandleInfo<Handle> { \
-	static FORCEINLINE void Set(libvlc_media_player_t*const m, THandle const h) { SetF(m, h); } \
-	static FORCEINLINE THandle Get(libvlc_media_player_t*const m) { return GetF(m); } \
-}
-Macro_VLCDrawableKind(NSObject, void*, libvlc_media_player_get_nsobject, libvlc_media_player_set_nsobject);
-Macro_VLCDrawableKind(HWND, void*, libvlc_media_player_get_hwnd, libvlc_media_player_set_hwnd);
-Macro_VLCDrawableKind(XWindow, uint32_t, libvlc_media_player_get_xwindow, libvlc_media_player_set_xwindow);
-Macro_VLCDrawableKind(AGL, uint32_t, libvlc_media_player_get_agl, libvlc_media_player_set_agl);
-#undef Macro_VLCDrawableKind
 
 template<>
 struct VLC<VLCKind::MediaPlayer> : public VLCWrapper<libvlc_media_player_t> {
-	explicit FORCEINLINE VLC(VLCLibrary::TStruct *const &instance)
+	explicit VLCX_INLINE VLC(VLCStruct<VLCKind::Instance> *const &instance)
 		: Wrapper(ConstructorRetain,
 			nullptr != instance ?
 			libvlc_media_player_new(instance) : nullptr) {
 	}
-	explicit FORCEINLINE VLC(VLCMedia::TStruct*const &media)
+	explicit VLCX_INLINE VLC(VLCMedia::TStruct*const &media)
 		: Wrapper(ConstructorRetain,
 			nullptr != media ? libvlc_media_player_new_from_media(media) : nullptr) {
 	}
-	explicit FORCEINLINE VLC(const VLCLibrary &instance) : VLC(instance.GetStructure()) {}
-	explicit FORCEINLINE VLC(const VLCMedia &media) : VLC(media.GetStructure()) {}
-	explicit FORCEINLINE VLC(TStruct *const &ptr) : Wrapper(ptr) {}
+	explicit VLCX_INLINE VLC(const VLCInstance &instance) : VLC(instance.GetStructure()) {}
+	explicit VLCX_INLINE VLC(const VLCMedia &media) : VLC(media.GetStructure()) {}
+	explicit VLCX_INLINE VLC(TStruct *const &ptr) : Wrapper(ptr) {}
 
-	FORCEINLINE VLC(const VLC&copy) : Wrapper(copy) {
-		Retain();
-	}
-	FORCEINLINE ~VLC() {
-		Release();
-	}
+	VLCX_INLINE VLC(const VLC&copy) : Wrapper(copy) {}
+	VLCX_INLINE ~VLC() { Release(); }
 
-	FORCEINLINE void SetMedia(VLCMedia::TStruct *const &media) {
+	VLCX_INLINE void SetMedia(VLCMedia::TStruct *const &media) {
 		if (auto m = GetStructure())
 			libvlc_media_player_set_media(m, media);
 	}
-	FORCEINLINE void SetMedia(VLCMedia &media) {
+	VLCX_INLINE void SetMedia(VLCMedia &media) {
 		SetMedia(media.GetStructure());
 	}
-	FORCEINLINE VLCMedia::TStruct *const GetMediaStructure() const {
+	VLCX_INLINE VLCMedia::TStruct *const GetMediaStructure() const {
 		if (auto m = GetStructure())
 			return libvlc_media_player_get_media(m);
 		return nullptr;
 	}
-	FORCEINLINE VLCMedia GetMedia() const { return VLCMedia(GetMediaStructure()); }
+	VLCX_INLINE VLCMedia GetMedia() const { return VLCMedia(GetMediaStructure()); }
 
-	FORCEINLINE void Play() { libvlc_media_player_play(GetStructure()); }
-	FORCEINLINE void Pause() { libvlc_media_player_pause(GetStructure()); }
-	FORCEINLINE void Stop() { libvlc_media_player_stop(GetStructure()); }
-	FORCEINLINE void SetPause(bool pause) { libvlc_media_player_set_pause(GetStructure(), pause ? (int)1 : (int)0); }
+	VLCX_INLINE VLCResult Play() { return VLCRes(libvlc_media_player_play(GetStructure())); }
+	VLCX_INLINE void Pause() { libvlc_media_player_pause(GetStructure()); }
+	VLCX_INLINE void Stop() { libvlc_media_player_stop(GetStructure()); }
+	VLCX_INLINE void SetPause(bool pause) { libvlc_media_player_set_pause(GetStructure(), pause ? (int)1 : (int)0); }
 
-	FORCEINLINE bool IsSeekable() const { return libvlc_media_player_is_seekable(GetStructure()) ? true : false; }
-	FORCEINLINE bool CanPause() const { return libvlc_media_player_can_pause(GetStructure()) ? true : false; }
-	FORCEINLINE bool IsPlaying()const { return libvlc_media_player_is_playing(GetStructure()) ? true : false; }
-	FORCEINLINE bool GetFullscreen() const { return libvlc_get_fullscreen(GetStructure()) ? true : false; }
-	FORCEINLINE void ToggleFullscreen() { libvlc_toggle_fullscreen(GetStructure()); }
-	FORCEINLINE void SetFullscreen(const bool on) { libvlc_set_fullscreen(GetStructure(), on ? (int)1 : (int)0); }
-	FORCEINLINE void SetKeyInput(const bool on) { libvlc_video_set_key_input(GetStructure(), on ? (int)1 : (int)0); }
-	FORCEINLINE void SetMouseInput(const bool on) { libvlc_video_set_mouse_input(GetStructure(), on ? (int)1 : (int)0); }
+	VLCX_INLINE VLCBoolean IsSeekable() const { return VLCBool(libvlc_media_player_is_seekable(GetStructure())); }
+	VLCX_INLINE VLCBoolean CanPause() const { return VLCBool(libvlc_media_player_can_pause(GetStructure())); }
+	VLCX_INLINE VLCBoolean IsPlaying()const { return VLCBool(libvlc_media_player_is_playing(GetStructure())); }
+	VLCX_INLINE VLCBoolean GetFullscreen() const { return VLCBool(libvlc_get_fullscreen(GetStructure())); }
+	VLCX_INLINE void ToggleFullscreen() { libvlc_toggle_fullscreen(GetStructure()); }
+	VLCX_INLINE void SetFullscreen(const bool on) { libvlc_set_fullscreen(GetStructure(), on ? (int)1 : (int)0); }
+	VLCX_INLINE void SetKeyInput(const bool on) { libvlc_video_set_key_input(GetStructure(), on ? (int)1 : (int)0); }
+	VLCX_INLINE void SetMouseInput(const bool on) { libvlc_video_set_mouse_input(GetStructure(), on ? (int)1 : (int)0); }
 
 
-	FORCEINLINE bool GetVideoSize(unsigned &width, unsigned &height, const unsigned num = 0)const { return libvlc_video_get_size(GetStructure(), num, &width, &height)?true:false; }
-	FORCEINLINE bool GetCursor(int &x, int &y, const unsigned num = 0)const { return libvlc_video_get_cursor(GetStructure(), num, &x, &y) ? true : false; }
-	FORCEINLINE float GetVideoScale()const { return libvlc_video_get_scale(GetStructure()); }
-	FORCEINLINE void SetVideoScale(const float factor) { libvlc_video_set_scale(GetStructure(), factor); }
-	FORCEINLINE VLCString GetAspectRatio()const { return libvlc_video_get_aspect_ratio(GetStructure()); }
-	FORCEINLINE void SetAspectRatio(const char*const aspect) { libvlc_video_set_aspect_ratio(GetStructure(), aspect); }
+	VLCX_INLINE VLCResult GetVideoSize(unsigned &width, unsigned &height, const unsigned num = 0)const { return VLCRes(libvlc_video_get_size(GetStructure(), num, &width, &height));/*<--*/ }
+	VLCX_INLINE VLCResult GetCursor(int &x, int &y, const unsigned num = 0)const { return VLCRes(libvlc_video_get_cursor(GetStructure(), num, &x, &y));/*<--*/ }
+	VLCX_INLINE float GetVideoScale()const { return libvlc_video_get_scale(GetStructure()); }
+	VLCX_INLINE void SetVideoScale(const float factor) { libvlc_video_set_scale(GetStructure(), factor); }
+	VLCX_INLINE VLCString GetAspectRatio()const { return libvlc_video_get_aspect_ratio(GetStructure()); }
+	VLCX_INLINE void SetAspectRatio(const char*const aspect) { libvlc_video_set_aspect_ratio(GetStructure(), aspect); }
 
-	FORCEINLINE int GetSPU()const { return libvlc_video_get_spu(GetStructure()); }
-	FORCEINLINE bool SetSPU(const int spu) { return libvlc_video_set_spu(GetStructure(), spu) ? false : true;/*<-- note that zero is returned on success*/ }
-	FORCEINLINE int GetSPUCount() const { return libvlc_video_get_spu_count(GetStructure()); }
-	FORCEINLINE bool SetSubtitleFile(const char *const subtitle) { return libvlc_video_set_subtitle_file(GetStructure(), subtitle) ? true : false; }
-	FORCEINLINE int64_t GetSPUDelay()const { return libvlc_video_get_spu_delay(GetStructure()); }
-	FORCEINLINE bool SetSPUDelay(const int64_t &delay) { return libvlc_video_set_spu_delay(GetStructure(), delay) ? false : true;/*<--*/ }
-	FORCEINLINE VLCString GetCropGeometry()const { return libvlc_video_get_crop_geometry(GetStructure()); }
-	FORCEINLINE void SetCropGeometry(const char *const geometry) { libvlc_video_set_crop_geometry(GetStructure(), geometry); }
-	FORCEINLINE int GetVideoTrack()const { return libvlc_video_get_track(GetStructure()); }
-	FORCEINLINE int GetTitle() const { return libvlc_media_player_get_title(GetStructure()); }
-	FORCEINLINE int GetTitleCount() const { return libvlc_media_player_get_title_count(GetStructure()); }
-	FORCEINLINE int GetChapterCountForTitle(const int title) const { return libvlc_media_player_get_chapter_count_for_title(GetStructure(), title); }
-	FORCEINLINE int GetChapterCount() const { return libvlc_media_player_get_chapter_count(GetStructure()); }
-	FORCEINLINE int GetChapter()const { return libvlc_media_player_get_chapter(GetStructure()); }
-	FORCEINLINE void SetChapter(const int chapter) { libvlc_media_player_set_chapter(GetStructure(), chapter); }
-	FORCEINLINE float GetPosition() const { return libvlc_media_player_get_position(GetStructure()); }
-	FORCEINLINE void SetPosition(const float position)const { libvlc_media_player_set_position(GetStructure(), position); }
-	FORCEINLINE libvlc_time_t GetTime() const { return libvlc_media_player_get_time(GetStructure()); }
-	FORCEINLINE libvlc_time_t GetLength() const { return libvlc_media_player_get_length(GetStructure()); }
-	FORCEINLINE void SetTime(const libvlc_time_t &time)const { libvlc_media_player_set_time(GetStructure(), time); }
-	FORCEINLINE bool WillPlay()const { return libvlc_media_player_will_play(GetStructure()) ? true : false; }
-	FORCEINLINE VLCAllocList<libvlc_track_description_t> GetTitleDescription() const { return libvlc_video_get_title_description(GetStructure()); }
-	FORCEINLINE VLCAllocList<libvlc_track_description_t> GetVideoTrackDescription() const { return libvlc_video_get_track_description(GetStructure()); }
-	FORCEINLINE VLCAllocList<libvlc_track_description_t> GetSPUDescription() const { return libvlc_video_get_spu_description(GetStructure()); }
-	FORCEINLINE VLCAllocList<libvlc_track_description_t> GetChapterDescription(const int title) const { return libvlc_video_get_chapter_description(GetStructure(), title); }
-	FORCEINLINE void SetTitleDisplay(libvlc_position_t position, unsigned int timeout) {
+	VLCX_INLINE int GetSPU()const { return libvlc_video_get_spu(GetStructure()); }
+	VLCX_INLINE VLCResult SetSPU(const int spu) { return VLCRes(libvlc_video_set_spu(GetStructure(), spu));/*<-- note that zero is returned on success*/ }
+	VLCX_INLINE int GetSPUCount() const { return libvlc_video_get_spu_count(GetStructure()); }
+	// note that docs say this returns the success status (boolean)
+	// this really isn't clear on if true or false is returned for success.
+	//
+	// So until someone wants to test this, returning int.
+	VLCX_INLINE int SetSubtitleFile(const char *const subtitle) { return libvlc_video_set_subtitle_file(GetStructure(), subtitle); }
+	VLCX_INLINE int64_t GetSPUDelay()const { return libvlc_video_get_spu_delay(GetStructure()); }
+	VLCX_INLINE VLCResult SetSPUDelay(const int64_t &delay) { return VLCRes(libvlc_video_set_spu_delay(GetStructure(), delay));/*<--*/ }
+	VLCX_INLINE VLCString GetCropGeometry()const { return libvlc_video_get_crop_geometry(GetStructure()); }
+	VLCX_INLINE void SetCropGeometry(const char *const geometry) { libvlc_video_set_crop_geometry(GetStructure(), geometry); }
+	VLCX_INLINE int GetVideoTrack()const { return libvlc_video_get_track(GetStructure()); }
+	VLCX_INLINE int GetTitle() const { return libvlc_media_player_get_title(GetStructure()); }
+	VLCX_INLINE int GetTitleCount() const { return libvlc_media_player_get_title_count(GetStructure()); }
+	VLCX_INLINE int GetChapterCountForTitle(const int title) const { return libvlc_media_player_get_chapter_count_for_title(GetStructure(), title); }
+	VLCX_INLINE int GetChapterCount() const { return libvlc_media_player_get_chapter_count(GetStructure()); }
+	VLCX_INLINE int GetChapter()const { return libvlc_media_player_get_chapter(GetStructure()); }
+	VLCX_INLINE void SetChapter(const int chapter) { libvlc_media_player_set_chapter(GetStructure(), chapter); }
+	VLCX_INLINE float GetPosition() const { return libvlc_media_player_get_position(GetStructure()); }
+	VLCX_INLINE void SetPosition(const float position)const { libvlc_media_player_set_position(GetStructure(), position); }
+	VLCX_INLINE libvlc_time_t GetTime() const { return libvlc_media_player_get_time(GetStructure()); }
+	VLCX_INLINE libvlc_time_t GetLength() const { return libvlc_media_player_get_length(GetStructure()); }
+	VLCX_INLINE void SetTime(const libvlc_time_t &time)const { libvlc_media_player_set_time(GetStructure(), time); }
+	VLCX_INLINE VLCBoolean WillPlay()const { return VLCBool(libvlc_media_player_will_play(GetStructure())); }
+	VLCX_INLINE VLCTrackDescriptionList GetTitleDescription() const { return libvlc_video_get_title_description(GetStructure()); }
+	VLCX_INLINE VLCTrackDescriptionList GetVideoTrackDescription() const { return libvlc_video_get_track_description(GetStructure()); }
+	VLCX_INLINE VLCTrackDescriptionList GetSPUDescription() const { return libvlc_video_get_spu_description(GetStructure()); }
+	VLCX_INLINE VLCTrackDescriptionList GetChapterDescription(const int title) const { return libvlc_video_get_chapter_description(GetStructure(), title); }
+	VLCX_INLINE void SetTitleDisplay(libvlc_position_t position, unsigned int timeout) {
 		libvlc_media_player_set_video_title_display(GetStructure(), position, timeout);
 	}
-	FORCEINLINE void Navigate(const VLCEnum<libvlc_navigate_mode_t> navigate) {
+	VLCX_INLINE void Navigate(const VLCEnum<libvlc_navigate_mode_t> navigate) {
 		libvlc_media_player_navigate(GetStructure(), navigate);
 	}
-	FORCEINLINE void NextFrame() {
+	VLCX_INLINE void NextFrame() {
 		libvlc_media_player_next_frame(GetStructure());
 	}
-	FORCEINLINE void NextChapter() {
+	VLCX_INLINE void NextChapter() {
 		libvlc_media_player_next_chapter(GetStructure());
 	}
-	FORCEINLINE void PreviousChapter() {
+	VLCX_INLINE void PreviousChapter() {
 		libvlc_media_player_next_chapter(GetStructure());
 	}
-	FORCEINLINE unsigned HasVOut()const { return libvlc_media_player_has_vout(GetStructure()); }
+	VLCX_INLINE unsigned HasVOut()const { return libvlc_media_player_has_vout(GetStructure()); }
 	// same as HasVOut, which is somewhat confusing.
-	FORCEINLINE unsigned GetEstablishedVideoOutputCount()const { return HasVOut(); }
-	FORCEINLINE float GetFPS()const { return libvlc_media_player_get_fps(GetStructure()); }
-	FORCEINLINE float GetRate()const { return libvlc_media_player_get_rate(GetStructure()); }
-	FORCEINLINE bool SetRate(const float rate) { return libvlc_media_player_set_rate(GetStructure(), rate) ? false : true;/*<--*/ }
-	FORCEINLINE int GetVideoTrackCount()const { return libvlc_video_get_track_count(GetStructure()); }
-	FORCEINLINE bool SetVideoTrack(const int track) { return libvlc_video_set_track(GetStructure(), track) ? false : true; /*<--*/}
-	FORCEINLINE int GetTeletext()const { return libvlc_video_get_teletext(GetStructure()); }
-	FORCEINLINE void SetTeletext(const int page) { libvlc_video_set_teletext(GetStructure(), page); }
-	FORCEINLINE void ToggleTeletext() { libvlc_toggle_teletext(GetStructure()); }
-	FORCEINLINE int GetLogoInt(const VLCEnum<libvlc_video_logo_option_t> option)const {
+	VLCX_INLINE unsigned GetEstablishedVideoOutputCount()const { return HasVOut(); }
+	VLCX_INLINE float GetFPS()const { return libvlc_media_player_get_fps(GetStructure()); }
+	VLCX_INLINE float GetRate()const { return libvlc_media_player_get_rate(GetStructure()); }
+	VLCX_INLINE VLCResult SetRate(const float rate) { return VLCRes(libvlc_media_player_set_rate(GetStructure(), rate));/*<--*/ }
+	VLCX_INLINE int GetVideoTrackCount()const { return libvlc_video_get_track_count(GetStructure()); }
+	VLCX_INLINE VLCResult SetVideoTrack(const int track) { return VLCRes(libvlc_video_set_track(GetStructure(), track)); /*<--*/}
+	VLCX_INLINE int GetTeletext()const { return libvlc_video_get_teletext(GetStructure()); }
+	VLCX_INLINE void SetTeletext(const int page) { libvlc_video_set_teletext(GetStructure(), page); }
+	VLCX_INLINE void ToggleTeletext() { libvlc_toggle_teletext(GetStructure()); }
+	VLCX_INLINE int GetLogoInt(const VLCEnum<libvlc_video_logo_option_t> option)const {
 		return libvlc_video_get_logo_int(GetStructure(), option);
 	}
-	FORCEINLINE void SetLogoInt(const VLCEnum<libvlc_video_logo_option_t>  option, const int value) {
+	VLCX_INLINE void SetLogoInt(const VLCEnum<libvlc_video_logo_option_t>  option, const int value) {
 		libvlc_video_set_logo_int(GetStructure(), option, value);
 	}
-	FORCEINLINE void SetLogoString(const VLCEnum<libvlc_video_logo_option_t>  option, const char *const value) {
+	VLCX_INLINE void SetLogoString(const VLCEnum<libvlc_video_logo_option_t>  option, const char *const value) {
 		libvlc_video_set_logo_string(GetStructure(), option, value);
 	}
-	FORCEINLINE void SetLogo(const VLCEnum<libvlc_video_logo_option_t> option, const int value) { SetLogoInt(option, value); }
-	FORCEINLINE void SetLogo(const VLCEnum<libvlc_video_logo_option_t> option, const char *const value) { SetLogoString(option, value); }
-	FORCEINLINE void GetLogo(const VLCEnum<libvlc_video_logo_option_t> option, int&value)const { value = GetLogoInt(option); }
+	VLCX_INLINE void SetLogo(const VLCEnum<libvlc_video_logo_option_t> option, const int value) { SetLogoInt(option, value); }
+	VLCX_INLINE void SetLogo(const VLCEnum<libvlc_video_logo_option_t> option, const char *const value) { SetLogoString(option, value); }
+	VLCX_INLINE void GetLogo(const VLCEnum<libvlc_video_logo_option_t> option, int&value)const { value = GetLogoInt(option); }
 
-	FORCEINLINE int GetVideoAdjustmentInt(const VLCEnum<libvlc_video_adjust_option_t> option)const {
+	VLCX_INLINE int GetVideoAdjustmentInt(const VLCEnum<libvlc_video_adjust_option_t> option)const {
 		return libvlc_video_get_adjust_int(GetStructure(), option);
 	}
-	FORCEINLINE float GetVideoAdjustmentFloat(const VLCEnum<libvlc_video_adjust_option_t> option)const {
+	VLCX_INLINE float GetVideoAdjustmentFloat(const VLCEnum<libvlc_video_adjust_option_t> option)const {
 		return libvlc_video_get_adjust_float(GetStructure(), option);
 	}
-	FORCEINLINE void SetVideoAdjustmentInt(const VLCEnum<libvlc_video_adjust_option_t> option, const int value) {
+	VLCX_INLINE void SetVideoAdjustmentInt(const VLCEnum<libvlc_video_adjust_option_t> option, const int value) {
 		libvlc_video_set_adjust_int(GetStructure(), option, value);
 	}
-	FORCEINLINE void SetVideoAdjustmentFloat(const VLCEnum<libvlc_video_adjust_option_t> option, const float value) {
+	VLCX_INLINE void SetVideoAdjustmentFloat(const VLCEnum<libvlc_video_adjust_option_t> option, const float value) {
 		libvlc_video_set_adjust_float(GetStructure(), option, value);
 	}
-	FORCEINLINE void GetVideoAdjustment(const VLCEnum<libvlc_video_adjust_option_t> option, int&value)const { value = GetVideoAdjustmentInt(option); }
-	FORCEINLINE void GetVideoAdjustment(const VLCEnum<libvlc_video_adjust_option_t> option, float&value)const { value = GetVideoAdjustmentFloat(option); }
-	FORCEINLINE void SetVideoAdjustment(const VLCEnum<libvlc_video_adjust_option_t> option, const int value) { SetVideoAdjustmentInt(option, value); }
-	FORCEINLINE void SetVideoAdjustment(const VLCEnum<libvlc_video_adjust_option_t> option, const float value) { SetVideoAdjustmentFloat(option, value); }
+	VLCX_INLINE void GetVideoAdjustment(const VLCEnum<libvlc_video_adjust_option_t> option, int&value)const { value = GetVideoAdjustmentInt(option); }
+	VLCX_INLINE void GetVideoAdjustment(const VLCEnum<libvlc_video_adjust_option_t> option, float&value)const { value = GetVideoAdjustmentFloat(option); }
+	VLCX_INLINE void SetVideoAdjustment(const VLCEnum<libvlc_video_adjust_option_t> option, const int value) { SetVideoAdjustmentInt(option, value); }
+	VLCX_INLINE void SetVideoAdjustment(const VLCEnum<libvlc_video_adjust_option_t> option, const float value) { SetVideoAdjustmentFloat(option, value); }
 	
-	FORCEINLINE int GetMarqueeInt(const VLCEnum<libvlc_video_marquee_option_t> option)const {
+	VLCX_INLINE int GetMarqueeInt(const VLCEnum<libvlc_video_marquee_option_t> option)const {
 		return libvlc_video_get_marquee_int(GetStructure(), option);
 	}
-	FORCEINLINE VLCString GetMarqueeString(const VLCEnum<libvlc_video_marquee_option_t> option)const {
+	VLCX_INLINE VLCString GetMarqueeString(const VLCEnum<libvlc_video_marquee_option_t> option)const {
 		return libvlc_video_get_marquee_string(GetStructure(), option);
 	}
-	FORCEINLINE void SetMarqueeInt(const VLCEnum<libvlc_video_marquee_option_t> option, const int value) {
+	VLCX_INLINE void SetMarqueeInt(const VLCEnum<libvlc_video_marquee_option_t> option, const int value) {
 		libvlc_video_set_marquee_int(GetStructure(), option, value);
 	}
-	FORCEINLINE void SetMarqueeString(const VLCEnum<libvlc_video_marquee_option_t> option, const char *const value) {
+	VLCX_INLINE void SetMarqueeString(const VLCEnum<libvlc_video_marquee_option_t> option, const char *const value) {
 		libvlc_video_set_marquee_string(GetStructure(), option, value);
 	}
-	FORCEINLINE void GetMarquee(const VLCEnum<libvlc_video_marquee_option_t> option, int&value)const { value = GetMarqueeInt(option); }
-	FORCEINLINE void SetMarquee(const VLCEnum<libvlc_video_marquee_option_t> option, const int value) { SetMarqueeInt(option, value); }
-	FORCEINLINE void SetMarquee(const VLCEnum<libvlc_video_marquee_option_t> option, const char*const value) { SetMarqueeString(option, value); }
+	VLCX_INLINE void GetMarquee(const VLCEnum<libvlc_video_marquee_option_t> option, int&value)const { value = GetMarqueeInt(option); }
+	VLCX_INLINE void SetMarquee(const VLCEnum<libvlc_video_marquee_option_t> option, const int value) { SetMarqueeInt(option, value); }
+	VLCX_INLINE void SetMarquee(const VLCEnum<libvlc_video_marquee_option_t> option, const char*const value) { SetMarqueeString(option, value); }
 	
-	FORCEINLINE void SetVideoFormat(const char *const chroma,
+	VLCX_INLINE void SetVideoFormat(const char *const chroma,
 		unsigned width, unsigned height,
 		unsigned pitch) {
 		libvlc_video_set_format(GetStructure(), chroma, width, height, pitch);
 	}
-	FORCEINLINE void SetVideoCallbacks(
+	VLCX_INLINE void SetVideoCallbacks(
 		libvlc_video_lock_cb lock,
 		libvlc_video_unlock_cb unlock,
 		libvlc_video_display_cb display,
 		void *opaque) {
 		libvlc_video_set_callbacks(GetStructure(), lock, unlock, display, opaque);
 	}
-	FORCEINLINE void SetVideoFormatCallbacks(
+	VLCX_INLINE void SetVideoFormatCallbacks(
 		libvlc_video_format_cb setup,
 		libvlc_video_cleanup_cb cleanup
 	) {
@@ -483,63 +465,65 @@ struct VLC<VLCKind::MediaPlayer> : public VLCWrapper<libvlc_media_player_t> {
 	}
 
 	template<VLCDrawableKind Drawable>
-	FORCEINLINE auto SetDrawable(typename VLCDrawableKindInfo<Drawable>::THandle const handle) {
+	VLCX_INLINE auto SetDrawable(typename VLCDrawableKindInfo<Drawable>::THandle const handle) {
 		return VLCDrawableKindInfo<Drawable>::Set(GetStructure(), handle);
 	}
 	template<VLCDrawableKind Drawable>
-	FORCEINLINE auto GetDrawable()const {
+	VLCX_INLINE auto GetDrawable()const {
 		return VLCDrawableKindInfo<Drawable>::Get(GetStructure());
 	}
-#define Macro_VLCDrawableKindGetSet(Kind)\
-	FORCEINLINE auto Set##Kind (VLCDrawableKindInfo<VLCDrawableKind::Draw_##Kind>::THandle const handle){ return SetDrawable<VLCDrawableKind::Draw_##Kind>(handle); } \
-	FORCEINLINE auto Get##Kind () const {return GetDrawable<VLCDrawableKind::Draw_##Kind>();}
-	Macro_VLCDrawableKindGetSet(AGL)
-	Macro_VLCDrawableKindGetSet(XWindow)
-	Macro_VLCDrawableKindGetSet(HWND)
-	Macro_VLCDrawableKindGetSet(NSObject)
-#undef Macro_VLCDrawableKindGetSet
 
-	FORCEINLINE void SetDeinterlace(const char *const mode) {
+#	define Macro_LIBVLCX_DrawableKindGetSet(Kind)\
+	VLCX_INLINE auto Set##Kind (VLCDrawableKindInfo<VLCDrawableKind::Draw_##Kind>::THandle const handle){ return SetDrawable<VLCDrawableKind::Draw_##Kind>(handle); } \
+	VLCX_INLINE auto Get##Kind () const {return GetDrawable<VLCDrawableKind::Draw_##Kind>();}
+	
+	Macro_LIBVLCX_Enumerate_VLCDrawableKind(Macro_LIBVLCX_DrawableKindGetSet)
+
+#	undef Macro_LIBVLCX_DrawableKindGetSet
+
+	VLCX_INLINE void SetDeinterlace(const char *const mode) {
 		libvlc_video_set_deinterlace(GetStructure(), mode);
 	}
 
-	FORCEINLINE bool TakeSnapshot(const unsigned num,
+	VLCX_INLINE VLCResult TakeSnapshot(const unsigned num,
 		const char *const filepath, const unsigned int width,
 		const unsigned int height) const {
-		return libvlc_video_take_snapshot(GetStructure(), num, filepath, width, height) ? false : true;/*<--*/
+		return VLCRes(libvlc_video_take_snapshot(GetStructure(), num, filepath, width, height));/*<--*/
 	}
 
 
 
-	FORCEINLINE bool SetAudioOutput(const char*const name) {
-		return libvlc_audio_output_set(GetStructure(), name) ? false : true/*<--*/;
+	VLCX_INLINE VLCResult SetAudioOutput(const char*const name) {
+		return VLCRes(libvlc_audio_output_set(GetStructure(), name))/*<--*/;
 	}
-	FORCEINLINE void SetAudioOutputDevice(const char*const output, const char*const device) {
+	VLCX_INLINE void SetAudioOutputDevice(const char*const output, const char*const device) {
 		return libvlc_audio_output_device_set(GetStructure(), output, device);
 	}
-	FORCEINLINE void ToggleMute() { libvlc_audio_toggle_mute(GetStructure()); }
-	FORCEINLINE bool GetMute() const { return libvlc_audio_get_mute(GetStructure()); }
-	FORCEINLINE void SetMute(const bool mute) { libvlc_audio_set_mute(GetStructure(), mute); }
+	VLCX_INLINE void ToggleMute() { libvlc_audio_toggle_mute(GetStructure()); }
+	// note that this returns negative if muting is irrelevant (no-audio).
+	// this is why it is not wrapped to VLCBoolean 
+	VLCX_INLINE int GetMute() const { return libvlc_audio_get_mute(GetStructure()); }
+	VLCX_INLINE void SetMute(const bool mute) { libvlc_audio_set_mute(GetStructure(), mute); }
 
 	//0...100
-	FORCEINLINE int GetVolume()const { return libvlc_audio_get_volume(GetStructure()); }
-	FORCEINLINE bool SetVolume(const int value) const { return libvlc_audio_set_volume(GetStructure(), value) ? false : true;/*<--*/ }
-	FORCEINLINE int GetAudioTrackCount()const { return libvlc_audio_get_track_count(GetStructure()); }
-	FORCEINLINE VLCAllocList<libvlc_track_description_t> GetAudioTrackDescription() const { return libvlc_audio_get_track_description(GetStructure()); }
-	FORCEINLINE int GetAudioTrack()const { return libvlc_audio_get_track(GetStructure()); }
-	FORCEINLINE bool SetAudioTrack(const int track) { return libvlc_audio_set_track(GetStructure(), track)?false:true;/*<--*/ }
-	FORCEINLINE VLCEnumI<libvlc_audio_output_channel_t> GetAudioChannel()const { return libvlc_audio_get_channel(GetStructure()); }
-	FORCEINLINE bool SetAudioChannel(const VLCEnumI<libvlc_audio_output_channel_t> channel) { return libvlc_audio_set_channel(GetStructure(), channel) ? false : true;/*<--*/ }
+	VLCX_INLINE int GetVolume()const { return libvlc_audio_get_volume(GetStructure()); }
+	VLCX_INLINE VLCResult SetVolume(const int value) { return VLCRes(libvlc_audio_set_volume(GetStructure(), value));/*<--*/ }
+	VLCX_INLINE int GetAudioTrackCount()const { return libvlc_audio_get_track_count(GetStructure()); }
+	VLCX_INLINE VLCTrackDescriptionList GetAudioTrackDescription() const { return libvlc_audio_get_track_description(GetStructure()); }
+	VLCX_INLINE int GetAudioTrack()const { return libvlc_audio_get_track(GetStructure()); }
+	VLCX_INLINE VLCResult SetAudioTrack(const int track) { return VLCRes(libvlc_audio_set_track(GetStructure(), track));/*<--*/ }
+	VLCX_INLINE VLCEnumI<libvlc_audio_output_channel_t> GetAudioChannel()const { return libvlc_audio_get_channel(GetStructure()); }
+	VLCX_INLINE VLCResult SetAudioChannel(const VLCEnumI<libvlc_audio_output_channel_t> channel) { return VLCRes(libvlc_audio_set_channel(GetStructure(), channel));/*<--*/ }
 
-	FORCEINLINE int64_t GetAudioDelay()const { return libvlc_audio_get_delay(GetStructure()); }
-	FORCEINLINE bool SetAudioDelay(const int64_t &value) { return libvlc_audio_set_delay(GetStructure(), value)?false:true;/*<--*/ }
+	VLCX_INLINE int64_t GetAudioDelay()const { return libvlc_audio_get_delay(GetStructure()); }
+	VLCX_INLINE VLCResult SetAudioDelay(const int64_t &value) { return VLCRes(libvlc_audio_set_delay(GetStructure(), value)); }
 
-	FORCEINLINE void SetAudioFormat(const char *const format,
+	VLCX_INLINE void SetAudioFormat(const char *const format,
 		unsigned rate, unsigned channels) {
 		libvlc_audio_set_format(GetStructure(), format, rate, channels);
 	}
 
-	FORCEINLINE void SetAudioCallbacks(
+	VLCX_INLINE void SetAudioCallbacks(
 		libvlc_audio_play_cb play,
 		libvlc_audio_pause_cb pause,
 		libvlc_audio_resume_cb resume,
@@ -548,23 +532,21 @@ struct VLC<VLCKind::MediaPlayer> : public VLCWrapper<libvlc_media_player_t> {
 		void *opaque) {
 		libvlc_audio_set_callbacks(GetStructure(), play, pause, resume, flush, drain, opaque);
 	}
-	FORCEINLINE void SetAudioFormatCallbacks(
+	VLCX_INLINE void SetAudioFormatCallbacks(
 		libvlc_audio_setup_cb setup,
 		libvlc_audio_cleanup_cb cleanup) {
 		libvlc_audio_set_format_callbacks(GetStructure(), setup, cleanup);
 	}
-	FORCEINLINE void SetVolumeCallback(
+	VLCX_INLINE void SetVolumeCallback(
 		libvlc_audio_set_volume_cb set_volume
 	) {
 		libvlc_audio_set_volume_callback(GetStructure(), set_volume);
 	}
-
-
-	Macro_LIBVLCX_ExposeEventManager(libvlc_media_player_event_manager);
+	Macro_LIBVLCX_VLCBody(libvlc_media_player_event_manager);
 };
-using VLCMediaPlayer = VLC<VLCKind::MediaPlayer>;
 
-#undef Macro_LIBVLCX_ExposeEventManager
+// no longer needed.
+#	undef Macro_LIBVLCX_VLCBody
 
 LIBVLCX_NAMESPACE(END)
 

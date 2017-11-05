@@ -6,45 +6,56 @@
 
 LIBVLCX_NAMESPACE(START)
 
-template<typename T> VLCX_INLINE void VLCFreeSingle(T*const &adr);
-template<typename T> VLCX_INLINE void VLCFreeList(T*const &adr);
+// Frees the instance. specialized for each type by use of Macro_LIBVLCX_BindAlloc
+template<typename T> VLCX_INLINE void VLCFree(T*const &adr);
 
-template<bool IsList>
-struct VLCFree {
-	template<typename T>
-	static VLCX_INLINE void Address(T*const &adr) { if (adr) VLCFreeList(adr); }
+// base template type for things that can be freed with vlc free.
+// this should not be explicitly specialized, only VLCFree should.
+//
+// a Steal method is provided for those special instances where you may want to do such a thing, just keep in mind to VLCFree it afterwards.
+template<typename T> struct VLCAlloc {
+	// the address of the item or nullptr.
+	// note that when the VLCAlloc gets deleted it will VLCFree the address
+	// so you should avoid passing this field around and prefer passing the VLCAlloc around by reference.
+	T * volatile const Base;
+
+	// binds the address to the instance.
+	VLCX_INLINE VLCAlloc(T*const& adr) : Base(adr) {}
+
+	// you cannot copy vlc alloc. it does not handle reference counting on purpose.
+	// pass it around with reference.
+	LIBVLCX_MEMBER_DELETE(VLCAlloc(const VLCAlloc&));
+
+	// note that this is not thread safe!
+	// returns a pointer to what base was prior to the call to steal while manipulating the base value to be nullptr.
+	// so that it does not free with this instance.
+	//
+	// this does mutate the constant Base member.
+	VLCX_INLINE T *Steal() {
+		T*const ReadAdr = Base;
+		*((T**)(&(this->Base))) = nullptr;
+		return ReadAdr;
+	}
+
+	// frees the Base
+	VLCX_INLINE ~VLCAlloc() { if ((VLCAlloc*)nullptr != this) if (T*const FreeBase = Steal()) VLCFree(FreeBase); }
+
+	// note that you have to make sure that this VLCAlloc does not get deleted prior to your use of the return value.
+	VLCX_INLINE T * operator *()const { return Base; }
 };
 
-template<>
-struct VLCFree<false> {
-	template<typename T>
-	static VLCX_INLINE void Address(T*const &adr) { if (adr) VLCFreeSingle(adr); }
-};
-
-template<typename T>
-struct VLCAllocAddress {
-	T*const Adr;
-protected:
-	explicit VLCX_INLINE VLCAllocAddress(T*const& adr) : Adr(adr) {}
-	VLCAllocAddress(const VLCAllocAddress&) = delete;
-};
-
-template<typename T, bool IsList>
-struct VLCAllocContainerBase : public VLCAllocAddress<T> {
-	enum { IS_LIST = (IsList ? true : false), };
-	VLCX_INLINE ~VLCAllocContainerBase() { VLCFree<IS_LIST>::Address(Adr); }
-protected:
-	explicit VLCX_INLINE VLCAllocContainerBase(T*const& adr) : VLCAllocAddress(adr) {}
-	VLCAllocContainerBase(const VLCAllocContainerBase&) = delete;
-};
-template<typename T, bool IsList>
-struct VLCAllocContainer : public VLCAllocContainerBase<T, IsList ? true : false> {
-	VLCX_INLINE VLCAllocContainer(const VLCAllocContainer &) = delete;
-	VLCX_INLINE VLCAllocContainer(T*const&adr) : VLCAllocContainerBase(adr) {}
-};
-
-template<typename T> using VLCAllocList = VLCAllocContainer<T, true>;
-template<typename T> using VLCAlloc = VLCAllocContainer<T, false>;
+// use this to define a allocation type
+// First parameter is the libvlc type
+// Second parameter is the libvlc free function
+// Third parameter what you would like to name the Alloc<> typedef.
+// Any additional args get sent tot he free call after the address.
+//
+// terminate with semicolon
+#define Macro_LIBVLCX_BindAlloc( TypeName, FreeCall, FriendlyName, ... )		\
+template<> VLCX_INLINE void VLCFree(TypeName*const &adr) {						\
+	FreeCall(adr,##__VA_ARGS__);												\
+}																				\
+using FriendlyName = VLCAlloc<TypeName>
 
 LIBVLCX_NAMESPACE(END)
 

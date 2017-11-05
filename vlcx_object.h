@@ -132,6 +132,8 @@ private:/*PROTECTED TO VLCWrapper<>*/
 	template<typename Struct> 
 	VLCX_EXPRESSION VLCObject(EConstructorRetain, Struct*const&ptr)
 		: VLCObject(ptr, ConstructorRetain, VLCStructKindOf<Struct>()) {}
+
+	VLCX_EXPRESSION VLCObject() : Kind(VLCKind::Null), Ptr(nullptr), Alive(0), RefCount(0) {}
 };
 
 // just ensuring the size is correct.
@@ -150,13 +152,13 @@ public:
 	static VLCX_CONSTANT VLCKind Kind = VLCStructKindOf<TStruct>();
 	
 	// the explicit implementation of the kind (VLC<>)
-	using Implementation = typename VLC<Kind>;
+	using Implementation = VLC<Kind>;
 
 	// the event manager type.
-	using EventManager = typename VLCEventManager<Kind>;
+	using EventManager = VLCEventManager<Kind>;
 	
 	// the type of the VLCWrapper<>
-	using Wrapper = typename VLCWrapper<Struct>;
+	using Wrapper = VLCWrapper<Struct>;
 
 	// returns a pointer to the TStruct off this unreleased wrapper or nullptr.
 	VLCX_EXPRESSION TStruct *const GetStructure() const {
